@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends # type: ignore
-from sqlalchemy.orm import Session # type: ignore
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from app.db.models import ChatMessage, ChatSession, DocumentRecord, StudyArtifact
-from app.db.session import DEFAULT_DB_PATH, get_db
+from app.db.session import DATABASE_URL, DEFAULT_DB_PATH, get_db
 
 
 router = APIRouter(
@@ -11,11 +11,26 @@ router = APIRouter(
 )
 
 
+def get_database_type() -> str:
+    if DATABASE_URL.startswith("sqlite"):
+        return "sqlite"
+
+    if DATABASE_URL.startswith("postgresql"):
+        return "postgresql"
+
+    return "unknown"
+
+
 @router.get("/status")
 def database_status(db: Session = Depends(get_db)):
+    database_type = get_database_type()
+
     return {
-        "database_file": str(DEFAULT_DB_PATH),
-        "database_exists": DEFAULT_DB_PATH.exists(),
+        "database_type": database_type,
+        "sqlite_file": str(DEFAULT_DB_PATH) if database_type == "sqlite" else None,
+        "sqlite_file_exists": DEFAULT_DB_PATH.exists()
+        if database_type == "sqlite"
+        else None,
         "tables": {
             "documents": db.query(DocumentRecord).count(),
             "chat_sessions": db.query(ChatSession).count(),
