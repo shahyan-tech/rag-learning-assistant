@@ -1,10 +1,10 @@
 from pathlib import Path
 from typing import List
 
-import chromadb # type: ignore
-from langchain_core.documents import Document # type: ignore
+import chromadb
+from langchain_core.documents import Document
 
-from app.ingestion.loaders import load_documents, chunk_documents
+from app.ingestion.loaders import chunk_documents, load_documents
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -16,9 +16,7 @@ def get_chroma_client():
     """Create a persistent ChromaDB client."""
     VECTORSTORE_DIR.mkdir(parents=True, exist_ok=True)
 
-    client = chromadb.PersistentClient(
-        path=str(VECTORSTORE_DIR)
-    )
+    client = chromadb.PersistentClient(path=str(VECTORSTORE_DIR))
 
     return client
 
@@ -27,25 +25,41 @@ def get_or_create_collection():
     """Get or create the collection where note chunks will be stored."""
     client = get_chroma_client()
 
-    collection = client.get_or_create_collection(
-        name=COLLECTION_NAME
-    )
+    collection = client.get_or_create_collection(name=COLLECTION_NAME)
 
     return collection
+
+
+def reset_vectorstore_collection() -> None:
+    """
+    Delete and recreate the Chroma collection.
+
+    Used when user clears their knowledge base.
+    """
+    client = get_chroma_client()
+
+    try:
+        client.delete_collection(COLLECTION_NAME)
+    except Exception:
+        pass
+
+    client.get_or_create_collection(name=COLLECTION_NAME)
 
 
 def build_chunk_id(chunk: Document, index: int) -> str:
     """
     Create a stable ID for every chunk.
 
-    Example:
-    Normal Equation.pdf-page-1-chunk-0
+    Source can include nested folder path:
+    ML Specialization/Course 1/Module 1/notes.pdf
     """
     metadata = chunk.metadata
     source = metadata.get("source", "unknown")
     page = metadata.get("page", metadata.get("slide", metadata.get("cell", "na")))
 
-    return f"{source}-part-{page}-chunk-{index}"
+    safe_source = str(source).replace("\\", "/")
+
+    return f"{safe_source}-part-{page}-chunk-{index}"
 
 
 def index_documents() -> int:
@@ -84,8 +98,18 @@ def index_documents() -> int:
 def search_notes(query: str, n_results: int = 3):
     """
     Search the vector database for the most relevant chunks.
+
+    If knowledge base is empty, return an empty Chroma-like result.
+    This allows the chatbot to fall back to general LLM knowledge.
     """
     collection = get_or_create_collection()
+
+    if collection.count() == 0:
+        return {
+            "documents": [[]],
+            "metadatas": [[]],
+            "distances": [[]],
+        }
 
     results = collection.query(
         query_texts=[query],

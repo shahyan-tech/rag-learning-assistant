@@ -11,11 +11,36 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter # type: igno
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
 
+SUPPORTED_EXTENSIONS = {
+    ".pdf",
+    ".pptx",
+    ".ipynb",
+    ".txt",
+    ".md",
+}
+
+
+def get_source_name(file_path: Path) -> str:
+    """
+    Return a clean source name relative to data/raw.
+
+    Example:
+    data/raw/ML Specialization/Course 1/Module 1/notes.pdf
+
+    becomes:
+    ML Specialization/Course 1/Module 1/notes.pdf
+    """
+    try:
+        return file_path.relative_to(RAW_DATA_DIR).as_posix()
+    except ValueError:
+        return file_path.name
+
 
 def load_pdf(file_path: Path) -> List[Document]:
     """Load text from a PDF file page by page."""
     documents = []
     reader = PdfReader(str(file_path))
+    source_name = get_source_name(file_path)
 
     for page_number, page in enumerate(reader.pages, start=1):
         text = page.extract_text() or ""
@@ -25,7 +50,8 @@ def load_pdf(file_path: Path) -> List[Document]:
                 Document(
                     page_content=text.strip(),
                     metadata={
-                        "source": file_path.name,
+                        "source": source_name,
+                        "file_name": file_path.name,
                         "file_path": str(file_path),
                         "file_type": "pdf",
                         "page": page_number,
@@ -40,6 +66,7 @@ def load_pptx(file_path: Path) -> List[Document]:
     """Load text from a PowerPoint file slide by slide."""
     documents = []
     presentation = Presentation(str(file_path))
+    source_name = get_source_name(file_path)
 
     for slide_number, slide in enumerate(presentation.slides, start=1):
         slide_text = []
@@ -55,7 +82,8 @@ def load_pptx(file_path: Path) -> List[Document]:
                 Document(
                     page_content=combined_text.strip(),
                     metadata={
-                        "source": file_path.name,
+                        "source": source_name,
+                        "file_name": file_path.name,
                         "file_path": str(file_path),
                         "file_type": "pptx",
                         "slide": slide_number,
@@ -70,6 +98,7 @@ def load_ipynb(file_path: Path) -> List[Document]:
     """Load markdown and code cells from a Jupyter notebook."""
     documents = []
     notebook = nbformat.read(str(file_path), as_version=4)
+    source_name = get_source_name(file_path)
 
     for cell_number, cell in enumerate(notebook.cells, start=1):
         cell_type = cell.get("cell_type", "")
@@ -80,7 +109,8 @@ def load_ipynb(file_path: Path) -> List[Document]:
                 Document(
                     page_content=source.strip(),
                     metadata={
-                        "source": file_path.name,
+                        "source": source_name,
+                        "file_name": file_path.name,
                         "file_path": str(file_path),
                         "file_type": "ipynb",
                         "cell": cell_number,
@@ -95,6 +125,7 @@ def load_ipynb(file_path: Path) -> List[Document]:
 def load_text_file(file_path: Path) -> List[Document]:
     """Load text from .txt or .md files."""
     text = file_path.read_text(encoding="utf-8", errors="ignore")
+    source_name = get_source_name(file_path)
 
     if not text.strip():
         return []
@@ -103,7 +134,8 @@ def load_text_file(file_path: Path) -> List[Document]:
         Document(
             page_content=text.strip(),
             metadata={
-                "source": file_path.name,
+                "source": source_name,
+                "file_name": file_path.name,
                 "file_path": str(file_path),
                 "file_type": file_path.suffix.lower().replace(".", ""),
             },
@@ -111,19 +143,35 @@ def load_text_file(file_path: Path) -> List[Document]:
     ]
 
 
-def load_documents(raw_data_dir: Path = RAW_DATA_DIR) -> List[Document]:
-    """Load all supported documents from the raw data folder."""
-    all_documents = []
+def get_supported_files(raw_data_dir: Path = RAW_DATA_DIR) -> List[Path]:
+    """
+    Recursively find all supported files inside data/raw.
 
+    This supports nested course folders:
+    data/raw/Specialization/Course/Module/file.pdf
+    """
     if not raw_data_dir.exists():
         raise FileNotFoundError(f"Raw data folder not found: {raw_data_dir}")
 
-    supported_files = list(raw_data_dir.glob("*"))
+    files = []
 
-    for file_path in supported_files:
+    for file_path in raw_data_dir.rglob("*"):
         if file_path.is_dir() or file_path.name.startswith("."):
             continue
 
+        if file_path.suffix.lower() in SUPPORTED_EXTENSIONS:
+            files.append(file_path)
+
+    return sorted(files)
+
+
+def load_documents(raw_data_dir: Path = RAW_DATA_DIR) -> List[Document]:
+    """Load all supported documents recursively from the raw data folder."""
+    all_documents = []
+
+    supported_files = get_supported_files(raw_data_dir)
+
+    for file_path in supported_files:
         suffix = file_path.suffix.lower()
 
         if suffix == ".pdf":
@@ -137,9 +185,6 @@ def load_documents(raw_data_dir: Path = RAW_DATA_DIR) -> List[Document]:
 
         elif suffix in [".txt", ".md"]:
             all_documents.extend(load_text_file(file_path))
-
-        else:
-            print(f"Skipping unsupported file: {file_path.name}")
 
     return all_documents
 

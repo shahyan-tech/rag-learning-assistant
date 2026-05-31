@@ -1,14 +1,26 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI # type: ignore
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
-
+from app.api.observability import router as observability_router
 from app.api.chat import router as chat_router
+from app.api.database import router as database_router
 from app.api.documents import router as documents_router
+from app.api.study import router as study_router
+from app.db.init_db import create_db_and_tables
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    create_db_and_tables()
+    yield
 
 
 app = FastAPI(
     title="RAG Learning Assistant API",
     description="Backend API for ML, DL, GenAI, and Agentic AI learning assistant.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
@@ -29,6 +41,9 @@ app.add_middleware(
 
 app.include_router(chat_router)
 app.include_router(documents_router)
+app.include_router(study_router)
+app.include_router(database_router)
+app.include_router(observability_router)
 
 
 @app.get("/")

@@ -1,31 +1,62 @@
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 *.pyd
+.Python
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Virtual environments
 .venv/
 venv/
 env/
+backend/.venv/
 
 # Environment variables
 .env
+*.env
+backend/.env
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
 
-# Data / private files
+# Local data / user uploads / vector DB / SQLite
 data/raw/*
-data/processed/*
-data/vectorstore/*
-
-# Keep folders
 !data/raw/.gitkeep
-!data/processed/.gitkeep
+data/vectorstore/*
 !data/vectorstore/.gitkeep
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+backend/data/
+*.db
+*.sqlite
+*.sqlite3
 
-# IDE
+# Node / React
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+.vite/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
 
-# OS
-.DS_Store
-Thumbs.db
+# Jupyter checkpoints
+.ipynb_checkpoints/

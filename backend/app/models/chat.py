@@ -1,4 +1,5 @@
-from typing import Any, List
+from datetime import datetime
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,11 @@ class ChatRequest(BaseModel):
         description="Number of relevant chunks to retrieve from the vector database.",
     )
 
+    session_id: Optional[int] = Field(
+        default=None,
+        description="Existing chat session ID. If empty, a new session is created.",
+    )
+
 
 class Source(BaseModel):
     source: str
@@ -28,3 +34,37 @@ class Source(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: List[Source]
+    answer_type: str
+    note: Optional[str] = None
+    session_id: int
+
+
+class ChatMessageResponse(BaseModel):
+    id: int
+    role: str
+    content: str
+    answer_type: Optional[str] = None
+    note: Optional[str] = None
+    sources: List[Source] = []
+    created_at: datetime
+
+
+class ChatSessionSummary(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int
+
+
+class ChatSessionDetail(BaseModel):
+    id: int
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[ChatMessageResponse]
+
+
+class DeleteSessionResponse(BaseModel):
+    message: str
+    session_id: int

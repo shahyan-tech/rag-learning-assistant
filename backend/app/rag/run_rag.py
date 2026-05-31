@@ -14,14 +14,23 @@ def main():
 
     result = answer_question(question)
 
+    print("\nAnswer Type:")
+    print(result["answer_type"])
+
+    print("\nNote:")
+    print(result["note"])
+
     print("\nAnswer:")
     print(result["answer"])
 
     print("\nSources:")
-    for source in result["sources"]:
-        print(
-            f"- {source['source']} | part: {source['location']} | distance: {source['distance']}"
-        )
+    if result["sources"]:
+        for source in result["sources"]:
+            print(
+                f"- {source['source']} | part: {source['location']} | distance: {source['distance']}"
+            )
+    else:
+        print("- No uploaded-note sources used.")
 
 
 if __name__ == "__main__":
