@@ -1,5 +1,5 @@
 import os
-
+from app.rag.vector_store import count_vectors
 from fastapi import APIRouter # type: ignore
 
 
@@ -31,4 +31,31 @@ def langgraph_status():
             "conditional_route",
             "answer_from_notes OR answer_general",
         ],
+    }
+
+
+
+@router.get("/vectorstore")
+def vectorstore_status():
+    try:
+        vector_count = count_vectors()
+        healthy = True
+        error = None
+    except Exception as exc:
+        vector_count = None
+        healthy = False
+        error = str(exc)
+
+    return {
+        "healthy": healthy,
+        "vector_backend": os.getenv("VECTOR_BACKEND", "chroma"),
+        "qdrant_url_loaded": bool(os.getenv("QDRANT_URL")),
+        "qdrant_api_key_loaded": bool(os.getenv("QDRANT_API_KEY")),
+        "qdrant_collection": os.getenv("QDRANT_COLLECTION", "learning_notes"),
+        "qdrant_embedding_model": os.getenv(
+            "QDRANT_EMBEDDING_MODEL",
+            "BAAI/bge-small-en",
+        ),
+        "vector_count": vector_count,
+        "error": error,
     }

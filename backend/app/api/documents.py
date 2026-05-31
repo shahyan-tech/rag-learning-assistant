@@ -3,8 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile # type: ignore
+from sqlalchemy.orm import Session # type: ignore
 
 from app.db.models import DocumentRecord
 from app.db.session import get_db

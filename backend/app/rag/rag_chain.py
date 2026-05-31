@@ -13,7 +13,13 @@ from app.rag.vector_store import search_notes
 load_dotenv()
 
 
-NOTES_DISTANCE_THRESHOLD = float(os.getenv("NOTES_DISTANCE_THRESHOLD", "1.35"))
+VECTOR_BACKEND = os.getenv("VECTOR_BACKEND", "chroma").lower()
+
+DEFAULT_NOTES_DISTANCE_THRESHOLD = "0.55" if VECTOR_BACKEND == "qdrant" else "1.35"
+
+NOTES_DISTANCE_THRESHOLD = float(
+    os.getenv("NOTES_DISTANCE_THRESHOLD", DEFAULT_NOTES_DISTANCE_THRESHOLD)
+)
 MIN_CONTEXT_CHARS = int(os.getenv("MIN_CONTEXT_CHARS", "250"))
 
 
